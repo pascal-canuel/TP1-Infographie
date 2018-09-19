@@ -1,0 +1,5 @@
+﻿  main.cpp
+c:\users\usager\source\repos\infographie\infographie\main.cpp(43): warning C4244: 'initialisation' : conversion de 'double' en 'float', perte possible de données
+  Shader_Loader.cpp
+  Génération de code en cours...
+  Infographie.vcxproj -> C:\Users\usager\source\repos\Infographie\Debug\Infographie.exe
