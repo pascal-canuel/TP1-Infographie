@@ -48,6 +48,7 @@ float _posXndc;
 float _posYndc;
 int _currentForm = -1;
 coulVertex _currentColor;
+bool _isRandomColor;
 std::vector<posVertex> _sommets;
 std::vector<coulVertex> _couleurs;
 GLuint _program;
@@ -57,8 +58,6 @@ void renderScene()
 {
 	glClear(GL_COLOR_BUFFER_BIT);
 	glUseProgram(_program);
-
-	glPointSize(15.0);
 
 	GLuint buffSommets;
 	glGenBuffers(1, &buffSommets); //	Création du buffer
@@ -74,14 +73,28 @@ void renderScene()
 	glBufferData(GL_ARRAY_BUFFER, sizeof(coulVertex) * _couleurs.size(), _couleurs.data(), GL_STREAM_DRAW); //	Insertion des données dans le buffer	
 	glVertexAttribPointer(1, 3, GL_FLOAT, FALSE, 0, NULL); //	Explication des données du buffer	
 
-	if (_currentForm == GL_POINTS) {
+	if (_currentForm == MENU_POINT) {
+		glPointSize(15.0);
 		glDrawArrays(GL_POINTS, 0, _sommets.size());
+	}
+	else if (_currentForm == MENU_LINE) {
+		glLineWidth(15.0);
+		glDrawArrays(GL_LINES, 0, _sommets.size());
 	}
 
 	glFlush();
 
 	glDisableVertexAttribArray(0);
+	glDisableVertexAttribArray(1);
 }
+
+#pragma region "Fonctions utilitaires"
+GLclampf randomColorValue()
+{
+	double random = rand() % 100 + 1;
+	return (GLclampf)(random / 100);
+}
+#pragma endregion
 
 #pragma region "Mouse"
 void getMouse(int button, int state, int x, int y)
@@ -98,21 +111,19 @@ void getMouse(int button, int state, int x, int y)
 
 		if (_currentForm >= 0) {
 			_sommets.push_back(posVertex(Xndc, Yndc));
-			_couleurs.push_back(_currentColor);
+
+			if (_isRandomColor) {
+				_couleurs.push_back(coulVertex(randomColorValue(), randomColorValue(), randomColorValue()));
+			} else {
+				_couleurs.push_back(_currentColor);
+			}
+			
 		}
 		else {
 			std::cout << "No form selected" << std::endl << std::endl;
 		}
 		
 	}
-}
-#pragma endregion
-
-#pragma region "Fonctions utilitaires"
-GLclampf randomColorValue()
-{
-	double random = rand() % 100 + 1;
-	return (GLclampf)(random / 100);
 }
 #pragma endregion
 
@@ -132,18 +143,24 @@ void traitementMenu(int valeur)
 
 void traitementSousMenuForme(int valeur)
 {
+	_sommets.clear();
+
 	switch (valeur)
 	{
 	case MENU_POINT:
-		_currentForm = GL_POINTS;
+		_currentForm = MENU_POINT;
 		break;
 	case MENU_LINE:
+		_currentForm = MENU_LINE;
 		break;
 	case MENU_TRIANGLE:
+		_currentForm = MENU_TRIANGLE;
 		break;
 	case MENU_QUAD:
+		_currentForm = MENU_QUAD;
 		break;
 	case MENU_CONTINUOUS_LINE:
+		_currentForm = MENU_CONTINUOUS_LINE;
 		break;
 	default:
 		break;
@@ -152,6 +169,7 @@ void traitementSousMenuForme(int valeur)
 
 void traitementSousMenuCouleurForme(int valeur)
 {
+	_isRandomColor = false;
 	switch (valeur)
 	{
 	case MENU_RED:
@@ -167,7 +185,7 @@ void traitementSousMenuCouleurForme(int valeur)
 		_currentColor = coulVertex(0.5f, 0.0f, 1.0f);
 		break;
 	case MENU_RANDOM_COLOR:
-		_currentColor = coulVertex(randomColorValue(), randomColorValue(), randomColorValue());
+		_isRandomColor = true;
 		break;
 	default:
 		break;
