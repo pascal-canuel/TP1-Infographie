@@ -1,10 +1,12 @@
 #include "Dependencies\glew\glew.h"
 #include "Dependencies\freeglut\freeglut.h"
 #include <iostream>
+#include <vector> 
 #include <cstdlib>
 #include <ctime>
 #include "Shader_Loader.h"
 
+#define MENU_REINITIALIZE 5
 #define MENU_EXIT 10
 #define MENU_RED 20
 #define MENU_GREEN 30
@@ -14,26 +16,46 @@
 #define MENU_POINT 70
 #define MENU_LINE 80
 #define MENU_TRIANGLE 90
-#define MENU_RECTANGLE 100
+#define MENU_QUAD 100
 #define MENU_CONTINUOUS_LINE 110
 
-float posXndc;
-float posYndc;
-int currentForm;
-GLuint program;
+struct posVertex {
+	float x;
+	float y;
+	posVertex(float pX, float pY) {
+		x = pX;
+		y = pY;
+	}
+};
+
+float _posXndc;
+float _posYndc;
+int _currentForm;
+std::vector<posVertex> _sommets;
+GLuint _program;
 
 //	Fonction de rendu
 void renderScene()
 {
 	glClear(GL_COLOR_BUFFER_BIT);
-	glUseProgram(program);
+	glUseProgram(_program);
 
-	if (currentForm == GL_POINTS)
-	{
+	glPointSize(15.0);
 
+	GLuint buffSommets;
+	glGenBuffers(1, &buffSommets); //	Création du buffer
+	glEnableVertexAttribArray(0); //	Activation du buffer
+	glBindBuffer(GL_ARRAY_BUFFER, buffSommets); //	Binding du buffer
+	glBufferData(GL_ARRAY_BUFFER, sizeof(posVertex) * _sommets.size(), _sommets.data(), GL_STREAM_DRAW); //	Insertion des données dans le buffer	
+	glVertexAttribPointer(0, 2, GL_FLOAT, FALSE, 0, NULL); //	Explication des données du buffer
+
+	if (_currentForm == GL_POINTS) {
+		glDrawArrays(GL_POINTS, 0, _sommets.size());
 	}
 
 	glFlush();
+
+	glDisableVertexAttribArray(0);
 }
 
 #pragma region "Mouse"
@@ -46,8 +68,10 @@ void getMouse(int button, int state, int x, int y)
 		std::cout << "********* CLICK INFO *********" << std::endl;
 		std::cout << "X: " << x << " Xndc: " << Xndc << std::endl;
 		std::cout << "Y: " << y << " Yndc: " << Yndc << std::endl << std::endl;
-		posXndc = Xndc;
-		posYndc = Yndc;
+		_posXndc = Xndc;
+		_posYndc = Yndc;
+
+		_sommets.push_back(posVertex(Xndc, Yndc));
 	}
 }
 #pragma endregion
@@ -67,6 +91,11 @@ void traitementMenu(int valeur)
 	{
 		glutLeaveMainLoop();
 	}
+	else if (valeur == MENU_REINITIALIZE) {
+		_sommets.clear();
+		//	redessiner la fenêtre
+		glutPostRedisplay();
+	}
 }
 
 void traitementSousMenuForme(int valeur)
@@ -74,13 +103,13 @@ void traitementSousMenuForme(int valeur)
 	switch (valeur)
 	{
 	case MENU_POINT:
-		currentForm = GL_POINTS;
+		_currentForm = GL_POINTS;
 		break;
 	case MENU_LINE:
 		break;
 	case MENU_TRIANGLE:
 		break;
-	case MENU_RECTANGLE:
+	case MENU_QUAD:
 		break;
 	case MENU_CONTINUOUS_LINE:
 		break;
@@ -140,7 +169,7 @@ void creerMenu()
 	glutAddMenuEntry("Point", MENU_POINT);
 	glutAddMenuEntry("Ligne", MENU_LINE);
 	glutAddMenuEntry("Triangle", MENU_TRIANGLE);
-	glutAddMenuEntry("Rectangle", MENU_RECTANGLE);
+	glutAddMenuEntry("Quad", MENU_QUAD);
 	glutAddMenuEntry("Ligne continue", MENU_CONTINUOUS_LINE);
 
 	sousMenuCouleurForme = glutCreateMenu(traitementSousMenuCouleurForme);
@@ -161,7 +190,8 @@ void creerMenu()
 	glutAddSubMenu("Forme", sousMenuForme);
 	glutAddSubMenu("Couleur forme", sousMenuCouleurForme);
 	glutAddSubMenu("Couleur fond", sousMenuCouleurFond);
-	glutAddMenuEntry("Exit", MENU_EXIT);
+	glutAddMenuEntry("Quitter", MENU_EXIT);
+	glutAddMenuEntry("Réinitialiser", MENU_REINITIALIZE);
 
 	glutAttachMenu(GLUT_RIGHT_BUTTON);
 
@@ -188,7 +218,7 @@ int main(int argc, char **argv)
 
 	Core::Shader_Loader shaderLoader;
 
-	program = shaderLoader.CreateProgram((char *)"Vertex_Shader.glsl", (char *)"Fragment_Shader.glsl");
+	_program = shaderLoader.CreateProgram((char *)"Vertex_Shader.glsl", (char *)"Fragment_Shader.glsl");
 
 	creerMenu();
 
