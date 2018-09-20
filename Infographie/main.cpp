@@ -28,10 +28,28 @@ struct posVertex {
 	}
 };
 
+struct coulVertex {
+	float red;
+	float green;
+	float blue;
+	coulVertex() {
+		red = 0.0f;
+		green = 0.0f;
+		blue = 0.0f;
+	}
+	coulVertex(float pRed, float pGreen, float pBlue) {
+		red = pRed;
+		green = pGreen;
+		blue = pBlue;
+	}
+};
+
 float _posXndc;
 float _posYndc;
-int _currentForm;
+int _currentForm = -1;
+coulVertex _currentColor;
 std::vector<posVertex> _sommets;
+std::vector<coulVertex> _couleurs;
 GLuint _program;
 
 //	Fonction de rendu
@@ -48,6 +66,13 @@ void renderScene()
 	glBindBuffer(GL_ARRAY_BUFFER, buffSommets); //	Binding du buffer
 	glBufferData(GL_ARRAY_BUFFER, sizeof(posVertex) * _sommets.size(), _sommets.data(), GL_STREAM_DRAW); //	Insertion des données dans le buffer	
 	glVertexAttribPointer(0, 2, GL_FLOAT, FALSE, 0, NULL); //	Explication des données du buffer
+
+	GLuint buffCouleurs;
+	glGenBuffers(1, &buffCouleurs); //	Création du buffer
+	glEnableVertexAttribArray(1); //	Activation du buffer
+	glBindBuffer(GL_ARRAY_BUFFER, buffCouleurs); //	Binding du buffer
+	glBufferData(GL_ARRAY_BUFFER, sizeof(coulVertex) * _couleurs.size(), _couleurs.data(), GL_STREAM_DRAW); //	Insertion des données dans le buffer	
+	glVertexAttribPointer(1, 3, GL_FLOAT, FALSE, 0, NULL); //	Explication des données du buffer	
 
 	if (_currentForm == GL_POINTS) {
 		glDrawArrays(GL_POINTS, 0, _sommets.size());
@@ -67,11 +92,18 @@ void getMouse(int button, int state, int x, int y)
 	if (GLUT_LEFT_BUTTON == button && GLUT_DOWN == state) {
 		std::cout << "********* CLICK INFO *********" << std::endl;
 		std::cout << "X: " << x << " Xndc: " << Xndc << std::endl;
-		std::cout << "Y: " << y << " Yndc: " << Yndc << std::endl << std::endl;
+		std::cout << "Y: " << y << " Yndc: " << Yndc << std::endl;
 		_posXndc = Xndc;
 		_posYndc = Yndc;
 
-		_sommets.push_back(posVertex(Xndc, Yndc));
+		if (_currentForm >= 0) {
+			_sommets.push_back(posVertex(Xndc, Yndc));
+			_couleurs.push_back(_currentColor);
+		}
+		else {
+			std::cout << "No form selected" << std::endl << std::endl;
+		}
+		
 	}
 }
 #pragma endregion
@@ -123,10 +155,19 @@ void traitementSousMenuCouleurForme(int valeur)
 	switch (valeur)
 	{
 	case MENU_RED:
+		_currentColor = coulVertex(1.0f, 0.0f, 0.0f);
 		break;
 	case MENU_GREEN:
+		_currentColor = coulVertex(0.0f, 1.0f, 0.0f);
 		break;
 	case MENU_BLUE:
+		_currentColor = coulVertex(0.0f, 0.0f, 1.0f);
+		break;
+	case MENU_PURPLE:		
+		_currentColor = coulVertex(0.5f, 0.0f, 1.0f);
+		break;
+	case MENU_RANDOM_COLOR:
+		_currentColor = coulVertex(randomColorValue(), randomColorValue(), randomColorValue());
 		break;
 	default:
 		break;
