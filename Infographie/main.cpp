@@ -53,7 +53,7 @@ bool _isRandomColor;
 std::vector<posVertex> _sommets;
 std::vector<coulVertex> _couleurs;
 
-float _quadLastClick, _quadScdLastClick;
+bool _mouseHold;
 GLuint _program;
 
 //	Fonction de rendu
@@ -76,6 +76,7 @@ void renderScene()
 	glBufferData(GL_ARRAY_BUFFER, sizeof(coulVertex) * _couleurs.size(), _couleurs.data(), GL_STREAM_DRAW); //	Insertion des données dans le buffer	
 	glVertexAttribPointer(1, 3, GL_FLOAT, FALSE, 0, NULL); //	Explication des données du buffer	
 
+	// TODO remplacer par switch-case
 	if (_currentForm == MENU_POINT) {
 		glPointSize(15.0);
 		glDrawArrays(GL_POINTS, 0, _sommets.size());
@@ -91,7 +92,11 @@ void renderScene()
 		for (int i = 0; i < countQuad; i++) {
 			glDrawArrays(GL_TRIANGLE_STRIP, i * 4, 4);
 		}		
+	} else if (_currentForm == MENU_CONTINUOUS_LINE) {
+		glLineWidth(3.0);
+		glDrawArrays(GL_LINE_STRIP, 0, _sommets.size());
 	}
+
 
 	glFlush();
 
@@ -110,6 +115,7 @@ GLclampf randomColorValue()
 #pragma region "Mouse"
 void getMouse(int button, int state, int x, int y)
 {
+	//	TODO créer méthode de conversion
 	float Xndc = (float)x * (1 + 1) / glutGet(GLUT_WINDOW_WIDTH) - 1;
 	float Yndc = (-1.0 * (y - glutGet(GLUT_WINDOW_HEIGHT)) * (1 + 1)) / glutGet(GLUT_WINDOW_HEIGHT) - 1;
 
@@ -118,6 +124,7 @@ void getMouse(int button, int state, int x, int y)
 		std::cout << "X: " << x << " Xndc: " << Xndc << std::endl;
 		std::cout << "Y: " << y << " Yndc: " << Yndc << std::endl;
 
+		_mouseHold = true;
 		if (_currentForm >= 0) {
 			
 			_sommets.push_back(posVertex(Xndc, Yndc));
@@ -134,6 +141,27 @@ void getMouse(int button, int state, int x, int y)
 		}
 		
 	}
+
+	if(GLUT_LEFT_BUTTON == button && GLUT_UP == state) _mouseHold = false;
+}
+
+void getMouseMotion(int x, int y)
+{
+	float Xndc = (float)x * (1 + 1) / glutGet(GLUT_WINDOW_WIDTH) - 1;
+	float Yndc = (-1.0 * (y - glutGet(GLUT_WINDOW_HEIGHT)) * (1 + 1)) / glutGet(GLUT_WINDOW_HEIGHT) - 1;
+	
+	if (_currentForm == MENU_CONTINUOUS_LINE) {
+		_sommets.push_back(posVertex(Xndc, Yndc));
+
+		if (_isRandomColor) {
+			_couleurs.push_back(coulVertex(randomColorValue(), randomColorValue(), randomColorValue()));
+		}
+		else {
+			_couleurs.push_back(_currentColor);
+		}
+	}
+	//	redessiner la fenêtre
+	glutPostRedisplay();
 }
 #pragma endregion
 
@@ -283,6 +311,7 @@ int main(int argc, char **argv)
 
 	glutDisplayFunc(renderScene);
 	glutMouseFunc(getMouse);
+	glutMotionFunc(getMouseMotion);
 	//	Fonction de rappel de fermeture?
 
 	Core::Shader_Loader shaderLoader;
