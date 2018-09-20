@@ -87,18 +87,10 @@ void renderScene()
 		glDrawArrays(GL_TRIANGLES, 0, _sommets.size());
 	} else if (_currentForm == MENU_QUAD && _sommets.size() != 0) {
 		int restant = _sommets.size() % 4;
-		if (restant == 0) {	//	dessiner le nouveau quad
-			int countQuad = _sommets.size() / 4;
-			for (int i = 0; i < countQuad; i++) {
-				glDrawArrays(GL_TRIANGLE_STRIP, i * 4, 4);
-			}
-		} else { //	dessiner les quads complet
-			int countQuad = (_sommets.size() - restant) / 4;
-			for (int i = 0; i < countQuad; i++) {
-				glDrawArrays(GL_TRIANGLE_STRIP, i * 4, 4);
-			}
-		}
-			
+		int countQuad = (_sommets.size() - restant) / 4;
+		for (int i = 0; i < countQuad; i++) {
+			glDrawArrays(GL_TRIANGLE_STRIP, i * 4, 4);
+		}		
 	}
 
 	glFlush();
