@@ -5,6 +5,7 @@
 #include <cstdlib>
 #include <ctime>
 #include "Shader_Loader.h"
+#include <algorithm>    // std::count
 
 #define MENU_REINITIALIZE 5
 #define MENU_EXIT 10
@@ -44,13 +45,15 @@ struct coulVertex {
 	}
 };
 
-float _posXndc;
-float _posYndc;
 int _currentForm = -1;
+
 coulVertex _currentColor;
 bool _isRandomColor;
+
 std::vector<posVertex> _sommets;
 std::vector<coulVertex> _couleurs;
+
+float _quadLastClick, _quadScdLastClick;
 GLuint _program;
 
 //	Fonction de rendu
@@ -80,6 +83,22 @@ void renderScene()
 	else if (_currentForm == MENU_LINE) {
 		glLineWidth(15.0);
 		glDrawArrays(GL_LINES, 0, _sommets.size());
+	} else if (_currentForm == MENU_TRIANGLE) {
+		glDrawArrays(GL_TRIANGLES, 0, _sommets.size());
+	} else if (_currentForm == MENU_QUAD && _sommets.size() != 0) {
+		int restant = _sommets.size() % 4;
+		if (restant == 0) {	//	dessiner le nouveau quad
+			int countQuad = _sommets.size() / 4;
+			for (int i = 0; i < countQuad; i++) {
+				glDrawArrays(GL_TRIANGLE_STRIP, i * 4, 4);
+			}
+		} else { //	dessiner les quads complet
+			int countQuad = (_sommets.size() - restant) / 4;
+			for (int i = 0; i < countQuad; i++) {
+				glDrawArrays(GL_TRIANGLE_STRIP, i * 4, 4);
+			}
+		}
+			
 	}
 
 	glFlush();
@@ -106,10 +125,9 @@ void getMouse(int button, int state, int x, int y)
 		std::cout << "********* CLICK INFO *********" << std::endl;
 		std::cout << "X: " << x << " Xndc: " << Xndc << std::endl;
 		std::cout << "Y: " << y << " Yndc: " << Yndc << std::endl;
-		_posXndc = Xndc;
-		_posYndc = Yndc;
 
 		if (_currentForm >= 0) {
+			
 			_sommets.push_back(posVertex(Xndc, Yndc));
 
 			if (_isRandomColor) {
@@ -144,7 +162,7 @@ void traitementMenu(int valeur)
 void traitementSousMenuForme(int valeur)
 {
 	_sommets.clear();
-
+	_couleurs.clear();
 	switch (valeur)
 	{
 	case MENU_POINT:
