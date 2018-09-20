@@ -5,6 +5,7 @@
 #include <cstdlib>
 #include <ctime>
 #include "Shader_Loader.h"
+#include <algorithm>    // std::count
 
 #define MENU_REINITIALIZE 5
 #define MENU_EXIT 10
@@ -44,13 +45,15 @@ struct coulVertex {
 	}
 };
 
-float _posXndc;
-float _posYndc;
 int _currentForm = -1;
+
 coulVertex _currentColor;
 bool _isRandomColor;
+
 std::vector<posVertex> _sommets;
 std::vector<coulVertex> _couleurs;
+
+float _quadLastClick, _quadScdLastClick;
 GLuint _program;
 
 //	Fonction de rendu
@@ -82,6 +85,8 @@ void renderScene()
 		glDrawArrays(GL_LINES, 0, _sommets.size());
 	} else if (_currentForm == MENU_TRIANGLE) {
 		glDrawArrays(GL_TRIANGLES, 0, _sommets.size());
+	} else if (_currentForm == MENU_QUAD) { 
+		glDrawArrays(GL_TRIANGLES, 0, _sommets.size());
 	}
 
 	glFlush();
@@ -108,11 +113,24 @@ void getMouse(int button, int state, int x, int y)
 		std::cout << "********* CLICK INFO *********" << std::endl;
 		std::cout << "X: " << x << " Xndc: " << Xndc << std::endl;
 		std::cout << "Y: " << y << " Yndc: " << Yndc << std::endl;
-		_posXndc = Xndc;
-		_posYndc = Yndc;
 
 		if (_currentForm >= 0) {
-			_sommets.push_back(posVertex(Xndc, Yndc));
+			if (_currentForm == MENU_QUAD) {
+				//	Si le nombre de sommets est impair alors le prochain vertex devra être constitué des 2 derniers sommets
+				if (_sommets.size() % 3 == 0 && _sommets.size() != 0) { //	S'il y a un triangle de dessiné, alors le prochain click utilisera les deux derniers vertex
+					posVertex lastItem = _sommets[_sommets.size() - 1];
+					posVertex scdLastItem = _sommets[_sommets.size() - 2];
+
+					_sommets.push_back(scdLastItem);
+					_sommets.push_back(lastItem);
+					_sommets.push_back(posVertex(Xndc, Yndc));
+				} else {
+					_sommets.push_back(posVertex(Xndc, Yndc));
+				}
+
+			} else {
+				_sommets.push_back(posVertex(Xndc, Yndc));
+			}
 
 			if (_isRandomColor) {
 				_couleurs.push_back(coulVertex(randomColorValue(), randomColorValue(), randomColorValue()));
