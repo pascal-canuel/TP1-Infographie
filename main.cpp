@@ -1,11 +1,17 @@
+/***********************************
+* Pascal Canuel
+* 2018-09-24
+* TP1 - Infographie
+************************************/
 #include "Dependencies\glew\glew.h"
 #include "Dependencies\freeglut\freeglut.h"
+#include "Dependencies\glm\glm\glm.hpp"
 #include <iostream>
 #include <vector> 
 #include <cstdlib>
 #include <ctime>
 #include "Shader_Loader.h"
-#include <algorithm>    // std::count
+#include <algorithm>    
 
 #define MENU_REINITIALIZE 5
 #define MENU_EXIT 10
@@ -45,48 +51,76 @@ struct coulVertex {
 	}
 };
 
-int _currentForm = -1;
+int _currentForm = MENU_POINT;
 
-coulVertex _currentColor;
+coulVertex _currentColor = coulVertex(0.0f, 1.0f, 0.0f);;
 bool _isRandomColor;
 
 std::vector<posVertex> _sommets;
 std::vector<coulVertex> _couleurs;
 
-float _quadLastClick, _quadScdLastClick;
+bool _mouseHold;
 GLuint _program;
+GLuint _buffSommets;
+GLuint _buffCouleurs;
 
 //	Fonction de rendu
 void renderScene()
 {
 	glClear(GL_COLOR_BUFFER_BIT);
 	glUseProgram(_program);
-
-	GLuint buffSommets;
-	glGenBuffers(1, &buffSommets); //	Création du buffer
+	
+	glGenBuffers(1, &_buffSommets); //	Création du buffer
 	glEnableVertexAttribArray(0); //	Activation du buffer
-	glBindBuffer(GL_ARRAY_BUFFER, buffSommets); //	Binding du buffer
+	glBindBuffer(GL_ARRAY_BUFFER, _buffSommets); //	Binding du buffer
 	glBufferData(GL_ARRAY_BUFFER, sizeof(posVertex) * _sommets.size(), _sommets.data(), GL_STREAM_DRAW); //	Insertion des données dans le buffer	
 	glVertexAttribPointer(0, 2, GL_FLOAT, FALSE, 0, NULL); //	Explication des données du buffer
 
-	GLuint buffCouleurs;
-	glGenBuffers(1, &buffCouleurs); //	Création du buffer
+	glGenBuffers(1, &_buffCouleurs); //	Création du buffer
 	glEnableVertexAttribArray(1); //	Activation du buffer
-	glBindBuffer(GL_ARRAY_BUFFER, buffCouleurs); //	Binding du buffer
+	glBindBuffer(GL_ARRAY_BUFFER, _buffCouleurs); //	Binding du buffer
 	glBufferData(GL_ARRAY_BUFFER, sizeof(coulVertex) * _couleurs.size(), _couleurs.data(), GL_STREAM_DRAW); //	Insertion des données dans le buffer	
 	glVertexAttribPointer(1, 3, GL_FLOAT, FALSE, 0, NULL); //	Explication des données du buffer	
 
-	if (_currentForm == MENU_POINT) {
-		glPointSize(15.0);
-		glDrawArrays(GL_POINTS, 0, _sommets.size());
-	}
-	else if (_currentForm == MENU_LINE) {
-		glLineWidth(15.0);
-		glDrawArrays(GL_LINES, 0, _sommets.size());
-	} else if (_currentForm == MENU_TRIANGLE) {
-		glDrawArrays(GL_TRIANGLES, 0, _sommets.size());
-	} else if (_currentForm == MENU_QUAD) { 
-		glDrawArrays(GL_TRIANGLES, 0, _sommets.size());
+	if (_sommets.size() != 0)
+	{
+		switch (_currentForm)
+		{
+		case MENU_POINT:
+		{
+			glPointSize(15.0);
+			glDrawArrays(GL_POINTS, 0, _sommets.size());
+			break;
+		}
+		case MENU_LINE:
+		{
+			glLineWidth(3.0);
+			glDrawArrays(GL_LINES, 0, _sommets.size());
+			break;
+		}
+		case MENU_TRIANGLE:
+		{
+			glDrawArrays(GL_TRIANGLES, 0, _sommets.size());
+			break;
+		}
+		case MENU_QUAD:
+		{
+			int restant = _sommets.size() % 4;
+			int countQuad = (_sommets.size() - restant) / 4;
+			for (int i = 0; i < countQuad; i++) {
+				glDrawArrays(GL_TRIANGLE_STRIP, i * 4, 4);
+			}
+			break;
+		}
+		case MENU_CONTINUOUS_LINE:
+		{
+			glLineWidth(3.0);
+			glDrawArrays(GL_LINE_STRIP, 0, _sommets.size());
+			break;
+		}
+		default:
+			break;
+		}
 	}
 
 	glFlush();
@@ -106,6 +140,7 @@ GLclampf randomColorValue()
 #pragma region "Mouse"
 void getMouse(int button, int state, int x, int y)
 {
+	//	TODO créer méthode de conversion
 	float Xndc = (float)x * (1 + 1) / glutGet(GLUT_WINDOW_WIDTH) - 1;
 	float Yndc = (-1.0 * (y - glutGet(GLUT_WINDOW_HEIGHT)) * (1 + 1)) / glutGet(GLUT_WINDOW_HEIGHT) - 1;
 
@@ -114,23 +149,10 @@ void getMouse(int button, int state, int x, int y)
 		std::cout << "X: " << x << " Xndc: " << Xndc << std::endl;
 		std::cout << "Y: " << y << " Yndc: " << Yndc << std::endl;
 
+		_mouseHold = true;
 		if (_currentForm >= 0) {
-			if (_currentForm == MENU_QUAD) {
-				//	Si le nombre de sommets est impair alors le prochain vertex devra être constitué des 2 derniers sommets
-				if (_sommets.size() % 3 == 0 && _sommets.size() != 0) { //	S'il y a un triangle de dessiné, alors le prochain click utilisera les deux derniers vertex
-					posVertex lastItem = _sommets[_sommets.size() - 1];
-					posVertex scdLastItem = _sommets[_sommets.size() - 2];
-
-					_sommets.push_back(scdLastItem);
-					_sommets.push_back(lastItem);
-					_sommets.push_back(posVertex(Xndc, Yndc));
-				} else {
-					_sommets.push_back(posVertex(Xndc, Yndc));
-				}
-
-			} else {
-				_sommets.push_back(posVertex(Xndc, Yndc));
-			}
+			
+			_sommets.push_back(posVertex(Xndc, Yndc));
 
 			if (_isRandomColor) {
 				_couleurs.push_back(coulVertex(randomColorValue(), randomColorValue(), randomColorValue()));
@@ -144,6 +166,27 @@ void getMouse(int button, int state, int x, int y)
 		}
 		
 	}
+
+	if(GLUT_LEFT_BUTTON == button && GLUT_UP == state) _mouseHold = false;
+}
+
+void getMouseMotion(int x, int y)
+{
+	float Xndc = (float)x * (1 + 1) / glutGet(GLUT_WINDOW_WIDTH) - 1;
+	float Yndc = (-1.0 * (y - glutGet(GLUT_WINDOW_HEIGHT)) * (1 + 1)) / glutGet(GLUT_WINDOW_HEIGHT) - 1;
+	
+	if (_currentForm == MENU_CONTINUOUS_LINE) {
+		_sommets.push_back(posVertex(Xndc, Yndc));
+
+		if (_isRandomColor) {
+			_couleurs.push_back(coulVertex(randomColorValue(), randomColorValue(), randomColorValue()));
+		}
+		else {
+			_couleurs.push_back(_currentColor);
+		}
+	}
+	//	redessiner la fenêtre
+	glutPostRedisplay();
 }
 #pragma endregion
 
@@ -152,10 +195,15 @@ void traitementMenu(int valeur)
 {
 	if (valeur == MENU_EXIT)
 	{
+		glDeleteBuffers(1, &_buffSommets);
+		glDeleteBuffers(1, &_buffCouleurs);
+		glDeleteProgram(_program);
 		glutLeaveMainLoop();
 	}
 	else if (valeur == MENU_REINITIALIZE) {
 		_sommets.clear();
+		_couleurs.clear();
+		glClearColor(1, 1, 1, 0); // fond d'écran blanc
 		//	redessiner la fenêtre
 		glutPostRedisplay();
 	}
@@ -290,9 +338,10 @@ int main(int argc, char **argv)
 	glClearColor(1, 1, 1, 0); // fond d'écran blanc à l'ouverture
 
 	glewInit();
-
+	
 	glutDisplayFunc(renderScene);
 	glutMouseFunc(getMouse);
+	glutMotionFunc(getMouseMotion);
 	//	Fonction de rappel de fermeture?
 
 	Core::Shader_Loader shaderLoader;
@@ -305,5 +354,6 @@ int main(int argc, char **argv)
 	glutMainLoop();
 
 	return 0;
+
 }
 
